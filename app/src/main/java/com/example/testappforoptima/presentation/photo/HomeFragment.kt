@@ -3,14 +3,17 @@ package com.example.testappforoptima.presentation.photo
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.example.domain.models.PhotosResponseItem
 import com.example.testappforoptima.R
 import com.example.testappforoptima.app.App
 import com.example.testappforoptima.base.BaseFragment
 import com.example.testappforoptima.databinding.FragmentHomeBinding
+import com.example.testappforoptima.internetAvailability
 import com.example.testappforoptima.presentation.MainAdapter
 import com.example.testappforoptima.presentation.MainViewModel
 import com.example.testappforoptima.presentation.MainViewModelFactory
@@ -39,8 +42,17 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(FragmentHomeBinding::infl
         }
 
         lifecycleScope.launch {
-            vm.getData()
-
+            var list = ArrayList<PhotosResponseItem>()
+            if (internetAvailability()) {
+                vm.getData()
+            } else {
+                CoroutineScope(Dispatchers.IO).launch {
+                    list = vm.getDataDB()
+                    lifecycleScope.launch {
+                        adapter.setListSMS(list)
+                    }
+                }
+            }
         }
 
         vm._ld.observe(viewLifecycleOwner) {
@@ -51,7 +63,7 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(FragmentHomeBinding::infl
 
                 for (i in it) {
 
-                    if(!listDB.contains(i)){
+                    if (!listDB.contains(i)) {
                         vm.insertDB(i)
                     }
                 }
@@ -62,6 +74,8 @@ class HomeFragment : BaseFragment<FragmentHomeBinding>(FragmentHomeBinding::infl
 
         binding.rvPhotos.adapter = adapter
     }
+
+
 
     override fun onAttach(context: Context) {
         AndroidSupportInjection.inject(this)
